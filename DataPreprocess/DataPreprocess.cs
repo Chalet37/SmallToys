@@ -32,7 +32,7 @@ namespace Chalet.DataPreprocess
                 this.lowwerBound = low;
             }
         }
-        public class ModelToBe:IComparable
+        public class PatternToBe:IComparable
         {
             public Dictionary<int, double> similarGroup;
             private int length;
@@ -53,7 +53,7 @@ namespace Chalet.DataPreprocess
             {
                 get { return this.length; }
             }
-            public ModelToBe(int length, int beginIndex)
+            public PatternToBe(int length, int beginIndex)
             {
                 this.similarGroup = new Dictionary<int, double>();
                 this.length = length;
@@ -73,27 +73,27 @@ namespace Chalet.DataPreprocess
 
             int IComparable.CompareTo(object other)
             {
-                return this.CompareTo((other as ModelToBe));
+                return this.CompareTo((other as PatternToBe));
             }
 
-            public int CompareTo(ModelToBe other)
+            public int CompareTo(PatternToBe other)
             {
-                        if (this.similarGroup.Count > (other as ModelToBe).similarGroup.Count)
+                        if (this.similarGroup.Count > (other as PatternToBe).similarGroup.Count)
                             return 1;
                         else
-                            if (this.similarGroup.Count < (other as ModelToBe).similarGroup.Count)
+                            if (this.similarGroup.Count < (other as PatternToBe).similarGroup.Count)
                                 return -1;
                             else
-                                if (this.averageSimilarity < (other as ModelToBe).averageSimilarity)
+                                if (this.averageSimilarity < (other as PatternToBe).averageSimilarity)
                                     return 1;
                                 else
-                                    if (this.averageSimilarity > (other as ModelToBe).averageSimilarity)
+                                    if (this.averageSimilarity > (other as PatternToBe).averageSimilarity)
                                         return -1;
                                     else
                                         return 0;
             }
 
-            public static bool operator <(ModelToBe left, ModelToBe right)
+            public static bool operator <(PatternToBe left, PatternToBe right)
             {
                 if (left.CompareTo(right) == -1)
                     return true;
@@ -101,7 +101,7 @@ namespace Chalet.DataPreprocess
                     return false;
             }
 
-            public static bool operator >(ModelToBe left, ModelToBe right)
+            public static bool operator >(PatternToBe left, PatternToBe right)
             {
                 if (left.CompareTo(right) == 1)
                     return true;
@@ -109,7 +109,7 @@ namespace Chalet.DataPreprocess
                     return false;
             }
 
-            public static bool operator ==(ModelToBe left, ModelToBe right)
+            public static bool operator ==(PatternToBe left, PatternToBe right)
             {
                 if (left.CompareTo(right) == 0)
                     return true;
@@ -117,7 +117,7 @@ namespace Chalet.DataPreprocess
                     return false;
             }
 
-            public static bool operator !=(ModelToBe left, ModelToBe right)
+            public static bool operator !=(PatternToBe left, PatternToBe right)
             {
                 if (left.CompareTo(right) != 0)
                     return true;
@@ -127,7 +127,7 @@ namespace Chalet.DataPreprocess
 
             public override bool Equals(object obj)
             {
-                return (this as ModelToBe) == (obj as ModelToBe);
+                return (this as PatternToBe) == (obj as PatternToBe);
             }
 
             public override int GetHashCode()
@@ -135,7 +135,7 @@ namespace Chalet.DataPreprocess
                 return base.GetHashCode();
             }
         }
-        public class Model
+        public class Pattern
         {
             private int beginIndex;
             private int length;
@@ -158,7 +158,7 @@ namespace Chalet.DataPreprocess
             }
 
 
-            public Model(ModelToBe model, double[] sourceData)
+            public Pattern(PatternToBe model, double[] sourceData)
             {
                 this.beginIndex = model.BeginIndex;
                 this.length = model.Length;
@@ -169,12 +169,12 @@ namespace Chalet.DataPreprocess
         }
         private Threshold<int> windowWidthThres;
         private Threshold<double> similarityThres;
-        private Dictionary<string, ModelToBe> modelsToBe;
-        private Model mod;
+        private Dictionary<string, PatternToBe> modelsToBe;
+        private Pattern pattern;
 
-        public Model Mod
+        public Pattern PatternPicked
         {
-            get { return this.mod; }
+            get { return this.pattern; }
         }
 
         public double[] Data
@@ -195,8 +195,8 @@ namespace Chalet.DataPreprocess
             this.windowWidthThres = new Threshold<int>(windowInitialWidth, windowInitialWidth + windowsWidthTolerance);
             this.similarityThres = new Threshold<double>(1, similarityTolerance);
             this.dataLength = data.Length;
-            modelsToBe = new Dictionary<string, ModelToBe>();
-            mod = null;
+            modelsToBe = new Dictionary<string, PatternToBe>();
+            pattern = null;
         }
 
         /// <summary>
@@ -266,14 +266,14 @@ namespace Chalet.DataPreprocess
         /// <summary>
         /// find repeat construction from data;
         /// </summary>
-        public void GetModel()
+        public void PickPattern()
         {
             modelsToBe.Clear();
             for(int w = this.windowWidthThres.LowwerBound; w < this.windowWidthThres.UpperBound; w ++)
             {
                 for(int modelBegin = 0; modelBegin < dataLength - w; modelBegin ++)
                 {
-                    ModelToBe newModel = new ModelToBe(w, modelBegin);
+                    PatternToBe newModel = new PatternToBe(w, modelBegin);
                     for(int t = modelBegin - modelBegin / w  * w; t < dataLength - w; t += w)
                     {
                         if (t == modelBegin)
@@ -298,7 +298,7 @@ namespace Chalet.DataPreprocess
             if (modelsToBe.Count == 0)
                 return;
 
-            ModelToBe model = modelsToBe.Values.First();
+            PatternToBe model = modelsToBe.Values.First();
             foreach(var element in modelsToBe.Values)
             {
                 if (element > model)
@@ -306,22 +306,22 @@ namespace Chalet.DataPreprocess
             }
 
 
-            //
-            mod = new Model(model, data);
+            
+            pattern = new Pattern(model, data);
         }
 
         /// <summary>
         /// sorpt every period of data to the current model
         /// </summary>
-        public void SorptToModel(double thres)
+        public void SorptToPattern(double thres)
         {
-                for (int t = mod.BeginIndex - mod.BeginIndex / mod.Length * mod.Length; t < dataLength - mod.Length; t += mod.Length)
+                for (int t = pattern.BeginIndex - pattern.BeginIndex / pattern.Length * pattern.Length; t < dataLength - pattern.Length; t += pattern.Length)
                 {
-                    if (t == mod.BeginIndex || !mod.similarGroup.Keys.Contains(t))
+                    if (t == pattern.BeginIndex || !pattern.similarGroup.Keys.Contains(t))
                         continue;
-                    for (int i = 0; i < mod.Length; i++)
+                    for (int i = 0; i < pattern.Length; i++)
                     {
-                        data[t + i] = ((1 - thres) * data[t + i] + thres * mod.Value[i]);
+                        data[t + i] = ((1 - thres) * data[t + i] + thres * pattern.Value[i]);
                     }
                 }
         }
@@ -331,14 +331,14 @@ namespace Chalet.DataPreprocess
         /// get repeated model after specific times of Iteration of sorption
         /// NOTE:if the sorption rate is samll, this method will be converge soon.
         /// </summary>
-        public void IterativeGetModel()
+        public void GeneratePattern()
         {
             int prevCount = 0;
-            while(Mod == null || prevCount != Mod.similarGroup.Count)
+            while(PatternPicked == null || prevCount != PatternPicked.similarGroup.Count)
             {
-                this.GetModel();
-                if (this.Mod != null)
-                    this.SorptToModel(0.1f);
+                this.PickPattern();
+                if (this.PatternPicked != null)
+                    this.SorptToPattern(0.1f);
                 else
                     return;
             }
@@ -349,13 +349,13 @@ namespace Chalet.DataPreprocess
         /// get repeated model after specific times of Iteration of sorption.
         /// </summary>
         /// <param name="times">times of iteration</param>
-        public void IterativeGetModel(long times)
+        public void GeneratePattern(long times)
         {
             for (int i = 0; i < times; i++)
             {
-                this.GetModel();
-                if (this.Mod != null)
-                    this.SorptToModel(0.1f);
+                this.PickPattern();
+                if (this.PatternPicked != null)
+                    this.SorptToPattern(0.1f);
                 else
                     return;
             }
@@ -363,12 +363,12 @@ namespace Chalet.DataPreprocess
 
         public int GetPeriod()
         {
-            return mod.Length;
+            return pattern.Length;
         }
 
         public int GetNumOfPeriods()
         {
-            return mod.similarGroup.Count + 1;
+            return pattern.similarGroup.Count + 1;
         }
 
         /// <summary>

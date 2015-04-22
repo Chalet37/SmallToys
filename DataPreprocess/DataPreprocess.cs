@@ -329,18 +329,27 @@ namespace Chalet.DataPreprocess
 
         /// <summary>
         /// get repeated model after specific times of Iteration of sorption
-        /// NOTE:if the sorption rate is samll, this method will be converge soon.
+        /// NOTE:if the sorption rate is small, this method will be converge soon.
         /// </summary>
-        public void GeneratePattern()
+        public void GeneratePattern(double thres)
         {
-            int prevCount = 0;
-            while(PatternPicked == null || prevCount != PatternPicked.similarGroup.Count)
+            try
             {
-                this.PickPattern();
-                if (this.PatternPicked != null)
-                    this.SorptToPattern(0.1f);
-                else
-                    return;
+                if (thres < 0.0f || thres > 1.0f)
+                    throw new ArgumentOutOfRangeException("Thres is out of range! Please Check.");
+                int prevCount = 0;
+                while (PatternPicked == null || prevCount != PatternPicked.similarGroup.Count)
+                {
+                    this.PickPattern();
+                    if (this.PatternPicked != null)
+                        this.SorptToPattern(thres);
+                    else
+                        return;
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 

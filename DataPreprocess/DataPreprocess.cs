@@ -338,9 +338,13 @@ namespace Chalet.DataPreprocess
                 if (thres < 0.0f || thres > 1.0f)
                     throw new ArgumentOutOfRangeException("Thres is out of range! Please Check.");
                 int prevCount = 0;
-                while (PatternPicked == null || prevCount != PatternPicked.similarGroup.Count)
+                while (true)
                 {
                     this.PickPattern();
+                    if (prevCount == PatternPicked.similarGroup.Count)
+                        break;
+                    else
+                        prevCount = PatternPicked.similarGroup.Count;
                     if (this.PatternPicked != null)
                         this.SorptToPattern(thres);
                     else
@@ -358,13 +362,13 @@ namespace Chalet.DataPreprocess
         /// get repeated model after specific times of Iteration of sorption.
         /// </summary>
         /// <param name="times">times of iteration</param>
-        public void GeneratePattern(long times)
+        public void GeneratePattern(long times, double thres)
         {
             for (int i = 0; i < times; i++)
             {
                 this.PickPattern();
                 if (this.PatternPicked != null)
-                    this.SorptToPattern(0.1f);
+                    this.SorptToPattern(thres);
                 else
                     return;
             }

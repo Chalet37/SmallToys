@@ -33,9 +33,11 @@ namespace FirstHMM
             this.numberOfObservationStatus = no;
             this.initialVector = pi;
             this.transmissionMatrix = new double[nh, nh];
-            Array.Copy((double[ , ])a.Clone(), transmissionMatrix, this.numberOfHiddenStatus * this.numberOfHiddenStatus);
+            this.transmissionMatrix = (double[,])a.Clone();
+            //Array.Copy((double[ , ])a.Clone(), transmissionMatrix, this.numberOfHiddenStatus * this.numberOfHiddenStatus);
             this.confusionMatrix = new double[nh, no];
-            Array.Copy((double[ , ])b.Clone(), confusionMatrix, this.numberOfObservationStatus * this.numberOfObservationStatus);
+            this.confusionMatrix = (double[,])b.Clone();
+            //Array.Copy((double[ , ])b.Clone(), confusionMatrix, this.numberOfObservationStatus * this.numberOfObservationStatus);
         }
 
 
@@ -48,9 +50,41 @@ namespace FirstHMM
         private void RefreshHMM(long T)
         {
             this.alpha = new double[this.numberOfHiddenStatus, T];
+            for (int i = 0; i < this.numberOfHiddenStatus; i ++)
+            {
+                for(int j = 0; j < T; j ++)
+                {
+                    this.alpha[i, j] = 0.0f;
+                }
+            }
             this.beta = new double[this.numberOfHiddenStatus, T];
+            for (int i = 0; i < this.numberOfHiddenStatus; i ++)
+            {
+                for(int j = 0; j < T; j++)
+                {
+                    this.alpha[i, j] = 0.0f;
+                }
+            }
             this.rho = new double[this.numberOfHiddenStatus, this.numberOfHiddenStatus, T];
+            for (int i = 0; i < this.numberOfHiddenStatus; i ++)
+            {
+                for(int j = 0; j < this.numberOfHiddenStatus; j ++)
+                {
+                    for(int k = 0; k < T; k ++)
+                    {
+                        this.rho[i, j, k] = 0.0f;
+                    }
+                }
+            }
+
             this.gamma = new double[this.numberOfHiddenStatus, T];
+            for(int i = 0; i < this.numberOfHiddenStatus; i ++)
+            {
+                for(int j = 0; j < T; j ++)
+                {
+                    this.gamma[i, j] = 0.0f;
+                }
+            }
         }
  
         /// <summary>
@@ -62,10 +96,14 @@ namespace FirstHMM
         /// <param name="t">specific time point</param>
         private void Forward(HiddenT j, ObservableT[] observableVector, long t)
         {
+            //Console.WriteLine("Forward: j = {0}, t = {1}, observableVector[t] = {2}", j, t, observableVector[t]);
             object intj = j;
             object intObservableVector = observableVector;
             if (t == 0)
+            {
                 alpha[(int)intj, 0] = initialVector[(int)intj] * confusionMatrix[(int)intj, ((int[])intObservableVector)[0]];
+                return;
+            }
             for (int i = 0; i < numberOfHiddenStatus; i++)
             {
                 alpha[(int)intj, t] += alpha[(int)i, t - 1] *
@@ -84,6 +122,7 @@ namespace FirstHMM
         /// <param name="observableVector">specific observable queue</param>
         private void Backward(HiddenT i, long t, long T, ObservableT[] observableVector)
         {
+            //Console.WriteLine("Backward: i = {0}", i);
             object inti = i;
             object intObservableVector = observableVector;
             if (t == T - 1)
@@ -129,7 +168,7 @@ namespace FirstHMM
             for (long t = T - 1; t >= 0; t--)
             {
                
-                for (int i = 0; i <= this.numberOfHiddenStatus; i++)
+                for (int i = 0; i < this.numberOfHiddenStatus; i++)
                 {
                     HiddenTypei = i;
                     Backward((HiddenT)HiddenTypei, t, T, observableVector);
@@ -149,9 +188,12 @@ namespace FirstHMM
                 throw new Exception("observable queue is not in a right type");
             double pr = 0;
 
+            RefreshHMM(T);
+            AlphaDP(T, observableQueue);
+
             for(int j = 0; j < numberOfHiddenStatus; j ++)
             {
-                pr += alpha[j, T];
+                pr += alpha[j, T - 1];
             }
             return pr;
         }
@@ -188,7 +230,7 @@ namespace FirstHMM
         {
             object intObservableVector = observableVector;
 
-            for (long t = 0; t < T; t++)
+            for (long t = 0; t < T - 1; t++)
             {
                 double denominator = 0;
                 for (int x = 0; x < numberOfHiddenStatus; x++)
@@ -201,14 +243,14 @@ namespace FirstHMM
                                        confusionMatrix[y, ((int[])intObservableVector)[t + 1]];
                     }
                 }
-                for (int i = 0; i < numberOfHiddenStatus; i++)
+                for (int i = 0; i < numberOfHiddenStatus; i++) 
                 {
                     for (int j = 0; j < numberOfHiddenStatus; j++)
                     {
-                        rho[i, j, t] = alpha[i, t] *
-                                                 transmissionMatrix[i, j] *
-                                                 beta[j, t + 1] *
-                                                 confusionMatrix[j, ((int[])intObservableVector)[t + 1]];
+                        rho[i, j, t] = (alpha[i, t] *
+                                       transmissionMatrix[i, j] *
+                                       beta[j, t + 1] *
+                                       confusionMatrix[j, ((int[])intObservableVector)[t + 1]]) / denominator;
                     }
                 }
             }
@@ -219,6 +261,7 @@ namespace FirstHMM
         /// </summary>
         private void UpdateInitialVector()
         {
+            //Console.WriteLine("length of initialVector = {0}, length of gamma = {1}, numberOfHiddenStatus = {2}", initialVector.Length, gamma.GetLength(0), numberOfHiddenStatus);
             for(int i = 0; i < numberOfHiddenStatus; i ++)
             {
                 initialVector[i] = gamma[i, 0];
@@ -272,6 +315,7 @@ namespace FirstHMM
                 }
                 for (int k = 0; k < numberOfObservationStatus; k++)
                 {
+                    
                     numerator = 0;
                     for(long t = 0; t < T; t ++)
                     {
@@ -298,6 +342,30 @@ namespace FirstHMM
             UpdateInitialVector();
             UpdateTransmissionMatrix(T);
             UpdateConfusionMatrix(T, oq);
+
+            #region transmissionMatrixOutput
+            Console.WriteLine("transmission:");
+            for(int i = 0; i < this.numberOfHiddenStatus; i ++)
+            {
+                for(int j = 0; j < this.numberOfHiddenStatus; j ++)
+                {
+                    Console.Write("{0}\t", this.transmissionMatrix[i, j]);
+                }
+                Console.WriteLine();
+            }
+            #endregion
+
+            #region confusionMatrixOutput
+            Console.WriteLine("confusion:");
+            for (int i = 0; i < this.numberOfHiddenStatus; i++)
+            {
+                for (int j = 0; j < this.numberOfObservationStatus; j++)
+                {
+                    Console.Write("{0}\t", this.confusionMatrix[i, j]);
+                }
+                Console.WriteLine();
+            }
+            #endregion
         }
 
         /// <summary>
@@ -305,11 +373,13 @@ namespace FirstHMM
         /// </summary>
         /// <param name="oqs">some groups of ObservableStatus</param>
         /// <param name="numOfObservableStatusGroups">number of groups of ObservableStatus</param>
-        public void HMMLearning(ObservableT[][] oqs, long numOfObservableStatusGroups)
+        public void HMMLearning(List<ObservableT[]> oqs)
         {
-            for(int i = 0; i < numOfObservableStatusGroups; i ++)
+            
+            foreach(var element in oqs)
             {
-                HMMLearningForOneTime(oqs[i], oqs[i].Length);
+                //Console.WriteLine("HMMLearning: length of observable queue = {0}", element.Length);
+                HMMLearningForOneTime(element, element.Length);
             }
         }
 
@@ -318,10 +388,10 @@ namespace FirstHMM
         /// </summary>
         /// <param name="oqs">some groups of ObservableStatus</param>
         /// <param name="isConvergence">condition function judge whether the iteration is converged</param>
-        public void HMMLearning(ObservableT[][] oqs, Func<FirstHMM<HiddenT, ObservableT>, bool> isConvergence)
+        public void HMMLearning(List<ObservableT[]> oqs, Func<FirstHMM<HiddenT, ObservableT>, bool> isConvergence)
         {
             int i = 0;
-            while(i < oqs.Length && !isConvergence(this))
+            while(i < oqs.Count && !isConvergence(this))
             {
                 HMMLearningForOneTime(oqs[i], oqs[i].Length);
             }

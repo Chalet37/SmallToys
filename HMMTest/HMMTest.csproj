@@ -32,6 +32,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="DataPreprocess, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\DataPreprocess.dll</HintPath>
+    </Reference>
+    <Reference Include="ModelConstructor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\ModelConstructor.dll</HintPath>
+    </Reference>
     <Reference Include="SqlTypes, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>.\SqlTypes.dll</HintPath>
@@ -53,6 +61,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DataPreprocess.dll" />
+    <Content Include="ModelConstructor.dll" />
     <Content Include="SqlTypes.dll" />
     <Content Include="testData.txt" />
   </ItemGroup>

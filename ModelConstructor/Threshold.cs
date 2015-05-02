@@ -36,7 +36,7 @@ namespace ChaletScripts.Threshold
             object objMax = max;
             object objMin = min;
 
-            this._length = (double)objMax - (double)objMin;
+            this._length = (double)objMax - (double)objMin + 1;
         }
     }
 }

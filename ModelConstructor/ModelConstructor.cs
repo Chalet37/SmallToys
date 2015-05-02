@@ -17,6 +17,7 @@ namespace ChaletScripts.ModelConstructor
         private double[] data;
         private long dataLength;
         private double _max, _min;
+        private double _intervalsLength;
         private Threshold<double>[] _thresholds;
         private Dictionary<long, Threshold<double>> _enumSet;
 
@@ -25,7 +26,7 @@ namespace ChaletScripts.ModelConstructor
         /// </summary>
         public double Max
         {
-            get { return _max; }
+            get { return this._max; }
         }
 
         /// <summary>
@@ -33,7 +34,12 @@ namespace ChaletScripts.ModelConstructor
         /// </summary>
         public double Min
         {
-            get { return _min; }
+            get { return this._min; }
+        }
+
+        public double IntervalsLength
+        {
+            get { return this._intervalsLength; }
         }
 
         /// <summary>
@@ -57,14 +63,15 @@ namespace ChaletScripts.ModelConstructor
         /// constructor
         /// </summary>
         /// <param name="data">source data</param>
-        public ModelConstructor(double[] data)
+        public ModelConstructor(double[] data, int numOfIntervals = 0)
         {
+            this.data = (double[])data.Clone();
             this.dataLength = data.Length;
-            Array.Copy((double[])data.Clone(), this.data, this.dataLength);
             _max = GetMaximum();
             _min = GetMinimun();
             this._thresholds = null;
             this._enumSet = new Dictionary<long, Threshold<double>>();
+            this.PlaceThresholds(numOfIntervals);
         }
 
         /// <summary>
@@ -105,9 +112,28 @@ namespace ChaletScripts.ModelConstructor
         /// </summary>
         /// <param name="numOfIntervals">the number of intervals</param>
         /// <returns>the length of every interval</returns>
-        public double PlaceThresholds(long numOfIntervals)
+        private double PlaceThresholds(long numOfIntervals)
         {
-            double intervalLength = (this._max - this._min) / (double)numOfIntervals;
+            double intervalLength;
+            if(numOfIntervals == 0)
+            {
+                intervalLength = 1;
+                this._thresholds = new Threshold<double>[(int)Math.Ceiling(this._max) - (int)Math.Floor(this._min)];
+
+                _thresholds[0]._min = Math.Floor(this._min);
+                _thresholds[0]._max = Math.Ceiling(this._min);
+                this.EnumSet.Add(0, _thresholds[0]);
+                for(int i = 0; i < numOfIntervals; i ++)
+                {
+                    this._thresholds[i]._min = _thresholds[i - 1]._max;
+                    this._thresholds[i]._max = _thresholds[i]._min + intervalLength;
+                    this._enumSet.Add(i, _thresholds[i]);
+                }
+
+                return intervalLength;
+
+            }
+            intervalLength = (this._max - this._min) / (double)numOfIntervals;
             this._thresholds = new Threshold<double>[numOfIntervals];
 
             _thresholds[0]._min = this._min;
@@ -122,6 +148,23 @@ namespace ChaletScripts.ModelConstructor
             }
 
             return intervalLength;
+        }
+
+        private int[] Reconstructor()
+        {
+            int[] processedData = new int[this.dataLength];
+            for (long i = 0; i < this.dataLength; i++)
+            {
+                for (long j = 0; j < this.EnumSet.Count; j++)
+                {
+                    if (data[i] >= this.EnumSet[j].Min && data[i] < this.EnumSet[j].Max)
+                    {
+                        processedData[i] = (int)j;
+                    }
+                }
+            }
+
+            return processedData;
         }
     }
 }
